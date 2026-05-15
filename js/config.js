@@ -41,9 +41,11 @@ export const DEFAULTS = {
   cupPlacement: "center",
   initialIceTemperature: 268.15,
   brushTemperature: 233.15,
+  simpleMode: true,
   trailStrength: 0,
   scenarioRunning: false,
   timeScale: 1,
+  phaseChangeRateScale: 10,
   temperatureUnit: "F",
   measurementSystem: "imperial",
   energyUnit: "cal"

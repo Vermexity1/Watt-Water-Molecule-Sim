@@ -113,6 +113,10 @@
           Explore how molecular collisions, heat transfer, and insulation choices shape the behavior of a virtual fluid sample.
         </p>
         <div class="status-pill" id="statusPill">Paused for setup</div>
+        <div class="mode-switch" aria-label="Control complexity">
+          <button class="mode-switch-btn active" id="simpleModeBtn" type="button">Simple</button>
+          <button class="mode-switch-btn" id="advancedModeBtn" type="button">Advanced</button>
+        </div>
       </div>
 
       <nav class="tab-nav" aria-label="Control groups">
@@ -127,6 +131,56 @@
       </nav>
 
       <div class="tab-stack">
+        <section class="tab-panel simple-panel" data-tab-panel="simple">
+          <div class="section compact">
+            <h2>Simple Setup</h2>
+            <div class="action-grid">
+              <button id="simpleStartPauseBtn">Start Simulation</button>
+              <button id="simpleResetBtn">Reset</button>
+            </div>
+            <div class="control-grid top-gap">
+              <div class="control-card control-card-wide">
+                <div class="label-row"><span>Starting Molecule Temperature</span><span class="value" id="simpleTemperatureValue"></span></div>
+                <input id="simpleTemperatureSlider" type="range" min="-273" max="500" step="1" value="42" />
+              </div>
+              <div class="control-card control-card-wide">
+                <div class="label-row"><span>Outside Temperature</span><span class="value" id="simpleAmbientValue"></span></div>
+                <input id="simpleAmbientSlider" type="range" min="-100" max="120" step="1" value="22" />
+              </div>
+              <div class="control-card">
+                <label for="simpleLayoutSelect">Scenario</label>
+                <select id="simpleLayoutSelect">
+                  <option value="tray" selected>Open Tray</option>
+                  <option value="cup">Cup Experiment</option>
+                </select>
+              </div>
+              <div class="control-card">
+                <label for="simpleMaterialSelect">Cup Material</label>
+                <select id="simpleMaterialSelect">
+                  <option value="Styrofoam">Styrofoam</option>
+                  <option value="Plastic">Plastic</option>
+                  <option value="Glass" selected>Glass</option>
+                  <option value="Metal">Metal</option>
+                </select>
+              </div>
+              <div class="control-card control-card-wide">
+                <div class="label-row"><span>Cup Thickness</span><span class="value" id="simpleThicknessValue"></span></div>
+                <input id="simpleThicknessSlider" type="range" min="0.6" max="5" step="0.1" value="1.6" />
+              </div>
+            </div>
+          </div>
+
+          <div class="section compact note-card">
+            <h2>Live Readout</h2>
+            <div class="readout simple-readout">
+              <div class="item"><div class="small">Temperature</div><div class="big" id="simpleMetricTemp">0 F</div></div>
+              <div class="item"><div class="small">Phase Pattern</div><div class="big" id="simpleMetricPhase">Liquid-like</div></div>
+              <div class="item"><div class="small">Outside</div><div class="big" id="simpleMetricAmbient">0 F</div></div>
+              <div class="item"><div class="small">Scenario</div><div class="big" id="simpleMetricScenario">Tray</div></div>
+            </div>
+          </div>
+        </section>
+
         <section class="tab-panel active" data-tab-panel="controls">
           <div class="section compact">
             <h2>Simulation Controls</h2>

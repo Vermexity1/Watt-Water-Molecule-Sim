@@ -469,6 +469,30 @@ body::before {
   font-size: 0.78rem;
 }
 
+.mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 10px;
+  padding: 5px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.48);
+  border: 1px solid rgba(27, 38, 50, 0.08);
+}
+
+.mode-switch-btn {
+  padding: 9px 10px;
+  border-radius: 12px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.mode-switch-btn.active {
+  background: linear-gradient(180deg, #0f7b84, #11626f);
+  color: #f8fbfb;
+  border-color: rgba(17, 122, 131, 0.32);
+}
+
 .tab-nav {
   display: grid;
   gap: 10px;
@@ -591,6 +615,23 @@ body::before {
 .tab-panel.active {
   display: grid;
   align-content: start;
+}
+
+.simple-mode .tab-nav {
+  display: none;
+}
+
+.simple-mode .tab-panel {
+  display: none;
+}
+
+.simple-mode .tab-panel.simple-panel {
+  display: grid;
+  align-content: start;
+}
+
+.simple-panel {
+  display: none;
 }
 
 .section {
@@ -1113,6 +1154,10 @@ button.warn.active {
 }
 
 .readout {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.simple-readout {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 

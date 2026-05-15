@@ -414,6 +414,24 @@ export class PhysicsEngine {
     }
   }
 
+  syncSpeedsToBulkTemperature() {
+    const targetTemp = Math.max(0.3, this.thermo?.sampleTemperature ?? this.metrics.temperature);
+    const phaseState = this.thermo?.phaseState ?? { solid: 0, liquid: 1, gas: 0 };
+    let speed2Sum = 0;
+    for (const particle of this.particles) {
+      speed2Sum += particle.speed2();
+    }
+
+    const currentTemp = Math.max(0.3, speed2ToTemperature(speed2Sum / Math.max(1, this.particles.length)));
+    const factor = Math.sqrt(targetTemp / currentTemp);
+    const syncStrength = clamp(0.18 + phaseState.liquid * 0.04 + phaseState.gas * 0.12 - phaseState.solid * 0.10, 0.08, 0.34);
+    const appliedFactor = lerp(1, factor, syncStrength);
+    for (const particle of this.particles) {
+      particle.vx *= appliedFactor;
+      particle.vy *= appliedFactor;
+    }
+  }
+
   updateParticleDisplayTemperatures(dt = this.config.dt) {
     const bulkTemp = Math.max(0.3, this.thermo?.sampleTemperature ?? this.metrics.kineticTemperature ?? this.metrics.temperature);
     const phaseState = this.thermo?.phaseState ?? { solid: 0, liquid: 1, gas: 0 };
@@ -457,6 +475,7 @@ export class PhysicsEngine {
     this.thermo.updateAtmosphericWater(this.bounds, this.visualBounds ?? this.bounds, dt);
     this.updateMetrics();
     this.stabilizeParticleSpeeds();
+    this.syncSpeedsToBulkTemperature();
     this.updateParticleDisplayTemperatures(dt);
     return this.updateMetrics();
   }

@@ -50,6 +50,8 @@ export class UIController {
       boundaryBadge: document.getElementById("boundaryBadge"),
       materialBadge: document.getElementById("materialBadge"),
       statusPill: document.getElementById("statusPill"),
+      simpleModeBtn: document.getElementById("simpleModeBtn"),
+      advancedModeBtn: document.getElementById("advancedModeBtn"),
       infoFabBtn: document.getElementById("infoFabBtn"),
       infoModalShell: document.getElementById("infoModalShell"),
       infoModalBackdrop: document.getElementById("infoModalBackdrop"),
@@ -66,6 +68,8 @@ export class UIController {
       resetToIceBtn: document.getElementById("resetToIceBtn"),
       startScenarioBtn: document.getElementById("startScenarioBtn"),
       stopScenarioBtn: document.getElementById("stopScenarioBtn"),
+      simpleStartPauseBtn: document.getElementById("simpleStartPauseBtn"),
+      simpleResetBtn: document.getElementById("simpleResetBtn"),
       particleFocusInput: document.getElementById("particleFocusInput"),
       applyParticleFocusBtn: document.getElementById("applyParticleFocusBtn"),
       clearParticleFocusBtn: document.getElementById("clearParticleFocusBtn"),
@@ -79,6 +83,9 @@ export class UIController {
       dtSlider: document.getElementById("dtSlider"),
       thicknessSlider: document.getElementById("thicknessSlider"),
       ambientSlider: document.getElementById("ambientSlider"),
+      simpleTemperatureSlider: document.getElementById("simpleTemperatureSlider"),
+      simpleAmbientSlider: document.getElementById("simpleAmbientSlider"),
+      simpleThicknessSlider: document.getElementById("simpleThicknessSlider"),
       humiditySlider: document.getElementById("humiditySlider"),
       envCoeffSlider: document.getElementById("envCoeffSlider"),
       gravitySlider: document.getElementById("gravitySlider"),
@@ -88,7 +95,9 @@ export class UIController {
       materialSelect: document.getElementById("materialSelect"),
       environmentSelect: document.getElementById("environmentSelect"),
       layoutSelect: document.getElementById("layoutSelect"),
+      simpleLayoutSelect: document.getElementById("simpleLayoutSelect"),
       cupPlacementSelect: document.getElementById("cupPlacementSelect"),
+      simpleMaterialSelect: document.getElementById("simpleMaterialSelect"),
       temperatureUnitSelect: document.getElementById("temperatureUnitSelect"),
       measurementSystemSelect: document.getElementById("measurementSystemSelect"),
       measurementCycleBtn: document.getElementById("measurementCycleBtn"),
@@ -103,6 +112,13 @@ export class UIController {
       dtValue: document.getElementById("dtValue"),
       thicknessValue: document.getElementById("thicknessValue"),
       ambientValue: document.getElementById("ambientValue"),
+      simpleTemperatureValue: document.getElementById("simpleTemperatureValue"),
+      simpleAmbientValue: document.getElementById("simpleAmbientValue"),
+      simpleThicknessValue: document.getElementById("simpleThicknessValue"),
+      simpleMetricTemp: document.getElementById("simpleMetricTemp"),
+      simpleMetricPhase: document.getElementById("simpleMetricPhase"),
+      simpleMetricAmbient: document.getElementById("simpleMetricAmbient"),
+      simpleMetricScenario: document.getElementById("simpleMetricScenario"),
       humidityValue: document.getElementById("humidityValue"),
       envCoeffValue: document.getElementById("envCoeffValue"),
       gravityValue: document.getElementById("gravityValue"),
@@ -119,6 +135,7 @@ export class UIController {
     const c = this.app.config;
 
     const bindNumberSlider = (key, input, onChange) => {
+      if (!input) return;
       input.addEventListener("input", () => {
         c[key] = Number(input.value);
         this.updateLabels();
@@ -132,6 +149,7 @@ export class UIController {
     };
 
     const bindTempSlider = (key, input, onChange) => {
+      if (!input) return;
       input.addEventListener("input", () => {
         c[key] = fromDisplayTemperature(Number(input.value), c.temperatureUnit);
         this.updateLabels();
@@ -142,6 +160,25 @@ export class UIController {
         this.updateLabels();
         onChange?.("change");
       });
+    };
+
+    const updateStartingTemperature = (kind) => {
+      this.app.setSystemTemperature(c.temperature, { immediate: false });
+      if (kind === "change") {
+        this.app.refreshStartingTemperature();
+      }
+    };
+
+    const updateLayout = (value) => {
+      c.cupPresent = value === "cup";
+      this.updateLabels();
+      this.app.previewScenario();
+    };
+
+    const updateMaterial = (value) => {
+      c.material = value;
+      this.updateLabels();
+      this.app.previewScenario();
     };
 
     e.tabButtons.forEach((button) => {
@@ -159,6 +196,8 @@ export class UIController {
 
     e.startPauseBtn.addEventListener("click", () => this.app.toggleRunning());
     e.resetBtn.addEventListener("click", () => this.app.resetSimulation(false));
+    e.simpleStartPauseBtn?.addEventListener("click", () => this.app.toggleRunning());
+    e.simpleResetBtn?.addEventListener("click", () => this.app.resetSimulation(false));
     e.recordTrialBtn.addEventListener("click", () => this.app.recordTrial());
     e.buildScenarioBtn.addEventListener("click", () => this.app.applyScenario({ start: false }));
     e.resetToIceBtn.addEventListener("click", () => this.app.resetToIceState());
@@ -183,18 +222,24 @@ export class UIController {
       this.updateLabels();
     });
 
+    e.simpleModeBtn?.addEventListener("click", () => {
+      c.simpleMode = true;
+      this.updateLabels();
+    });
+
+    e.advancedModeBtn?.addEventListener("click", () => {
+      c.simpleMode = false;
+      this.updateLabels();
+    });
+
     e.thermostatBtn.addEventListener("click", () => {
       c.thermostat = !c.thermostat;
       this.app.thermo.setTemperatureTarget(c.temperature);
       this.updateLabels();
     });
 
-    bindTempSlider("temperature", e.temperatureSlider, (kind) => {
-      this.app.setSystemTemperature(c.temperature, { immediate: false });
-      if (kind === "change") {
-        this.app.refreshStartingTemperature();
-      }
-    });
+    bindTempSlider("temperature", e.temperatureSlider, updateStartingTemperature);
+    bindTempSlider("temperature", e.simpleTemperatureSlider, updateStartingTemperature);
     bindTempSlider("brushTemperature", e.brushTempSlider);
     bindNumberSlider("particleCount", e.particleCountSlider, (kind) => {
       if (kind === "change") this.app.resetSimulation(false);
@@ -205,7 +250,9 @@ export class UIController {
     });
     bindNumberSlider("dt", e.dtSlider);
     bindNumberSlider("cupThickness", e.thicknessSlider, () => this.app.previewScenario());
+    bindNumberSlider("cupThickness", e.simpleThicknessSlider, () => this.app.previewScenario());
     bindTempSlider("ambientTemp", e.ambientSlider, () => this.app.previewScenario());
+    bindTempSlider("ambientTemp", e.simpleAmbientSlider, () => this.app.previewScenario());
     bindNumberSlider("ambientHumidity", e.humiditySlider, () => this.app.previewScenario());
     bindNumberSlider("envCoeff", e.envCoeffSlider, () => this.app.previewScenario());
     bindNumberSlider("gravityStrength", e.gravitySlider);
@@ -217,11 +264,8 @@ export class UIController {
       c.vectors = Number(e.vectorsSlider.value) > 0;
     });
 
-    e.materialSelect.addEventListener("change", () => {
-      c.material = e.materialSelect.value;
-      this.updateLabels();
-      this.app.previewScenario();
-    });
+    e.materialSelect.addEventListener("change", () => updateMaterial(e.materialSelect.value));
+    e.simpleMaterialSelect?.addEventListener("change", () => updateMaterial(e.simpleMaterialSelect.value));
 
     e.environmentSelect.addEventListener("change", () => {
       c.environment = e.environmentSelect.value;
@@ -233,11 +277,8 @@ export class UIController {
       this.app.previewScenario();
     });
 
-    e.layoutSelect.addEventListener("change", () => {
-      c.cupPresent = e.layoutSelect.value === "cup";
-      this.updateLabels();
-      this.app.previewScenario();
-    });
+    e.layoutSelect.addEventListener("change", () => updateLayout(e.layoutSelect.value));
+    e.simpleLayoutSelect?.addEventListener("change", () => updateLayout(e.simpleLayoutSelect.value));
 
     e.cupPlacementSelect.addEventListener("change", () => {
       c.cupPlacement = e.cupPlacementSelect.value;
@@ -293,7 +334,14 @@ export class UIController {
   applyTemperatureSliderRanges() {
     const { temperatureUnit } = this.app.config;
     const range = getTemperatureSliderRange(temperatureUnit);
-    [this.elements.temperatureSlider, this.elements.brushTempSlider, this.elements.ambientSlider].forEach((input) => {
+    [
+      this.elements.temperatureSlider,
+      this.elements.brushTempSlider,
+      this.elements.ambientSlider,
+      this.elements.simpleTemperatureSlider,
+      this.elements.simpleAmbientSlider
+    ].forEach((input) => {
+      if (!input) return;
       input.min = String(range.min);
       input.max = String(range.max);
       input.step = String(range.step);
@@ -359,15 +407,19 @@ export class UIController {
     c.energyUnit = c.measurementSystem === "imperial" ? "cal" : "J";
 
     this.applyTemperatureSliderRanges();
+    document.body.classList.toggle("simple-mode", c.simpleMode);
 
     e.temperatureValue.textContent = formatTemperature(c.temperature, c.temperatureUnit, 0);
+    if (e.simpleTemperatureValue) e.simpleTemperatureValue.textContent = formatTemperature(c.temperature, c.temperatureUnit, 0);
     e.brushTempValue.textContent = formatTemperature(c.brushTemperature, c.temperatureUnit, 0);
     e.particleCountValue.textContent = `${c.particleCount}`;
     e.epsilonValue.textContent = fmt(c.epsilon, 2);
     e.sigmaValue.textContent = fmt(c.sigma, 1);
     e.dtValue.textContent = `${fmt(c.dt, 3)} s`;
     e.thicknessValue.textContent = formatLength(c.cupThickness, c.measurementSystem, 2);
+    if (e.simpleThicknessValue) e.simpleThicknessValue.textContent = formatLength(c.cupThickness, c.measurementSystem, 2);
     e.ambientValue.textContent = formatTemperature(c.ambientTemp, c.temperatureUnit, 0);
+    if (e.simpleAmbientValue) e.simpleAmbientValue.textContent = formatTemperature(c.ambientTemp, c.temperatureUnit, 0);
     e.humidityValue.textContent = `${fmt(c.ambientHumidity, 0)}%`;
     e.envCoeffValue.textContent = fmt(c.envCoeff, 2);
     e.gravityValue.textContent = fmt(c.gravityStrength, 2);
@@ -380,23 +432,30 @@ export class UIController {
     e.materialBadge.textContent = c.cupPresent ? `Cup: ${c.material}` : "Layout: Open Tray";
     e.boundaryReadout.textContent = c.boundaryMode === "reflective" ? "Reflective" : "Periodic";
 
+    e.simpleModeBtn?.classList.toggle("active", c.simpleMode);
+    e.advancedModeBtn?.classList.toggle("active", !c.simpleMode);
     e.overlayBtn.classList.toggle("active", c.overlay);
     e.thermostatBtn.classList.toggle("active", c.thermostat);
     e.thermostatBtn.textContent = c.thermostat ? "Inside Source Active" : "Inside Temp Sets Start";
 
     e.temperatureSlider.value = String(Math.round(toDisplayTemperature(c.temperature, c.temperatureUnit)));
+    if (e.simpleTemperatureSlider) e.simpleTemperatureSlider.value = String(Math.round(toDisplayTemperature(c.temperature, c.temperatureUnit)));
     e.brushTempSlider.value = String(Math.round(toDisplayTemperature(c.brushTemperature, c.temperatureUnit)));
     e.ambientSlider.value = String(Math.round(toDisplayTemperature(c.ambientTemp, c.temperatureUnit)));
+    if (e.simpleAmbientSlider) e.simpleAmbientSlider.value = String(Math.round(toDisplayTemperature(c.ambientTemp, c.temperatureUnit)));
     e.humiditySlider.value = String(Math.round(c.ambientHumidity));
     e.gravitySlider.value = String(c.gravityStrength);
     e.convectionSlider.value = String(c.convectionStrength);
     e.trailsSlider.value = String(c.trailStrength);
     e.vectorsSlider.value = c.vectors ? "1" : "0";
     e.thicknessSlider.value = String(c.cupThickness);
+    if (e.simpleThicknessSlider) e.simpleThicknessSlider.value = String(c.cupThickness);
     e.envCoeffSlider.value = String(c.envCoeff);
     e.layoutSelect.value = c.cupPresent ? "cup" : "tray";
+    if (e.simpleLayoutSelect) e.simpleLayoutSelect.value = c.cupPresent ? "cup" : "tray";
     e.cupPlacementSelect.value = c.cupPlacement;
     e.materialSelect.value = c.material;
+    if (e.simpleMaterialSelect) e.simpleMaterialSelect.value = c.material;
     e.environmentSelect.value = c.environment;
     if (e.temperatureUnitSelect) e.temperatureUnitSelect.value = c.temperatureUnit;
     if (e.measurementSystemSelect) e.measurementSystemSelect.value = c.measurementSystem;
@@ -440,6 +499,11 @@ export class UIController {
     if (e.dripReadout) e.dripReadout.textContent = `${thermo.fallingDroplets.length}`;
     e.statusPill.textContent = this.getStatusText(running);
     e.startPauseBtn.textContent = running ? "Pause Simulation" : "Resume Simulation";
+    if (e.simpleStartPauseBtn) e.simpleStartPauseBtn.textContent = running ? "Pause Simulation" : "Start Simulation";
+    if (e.simpleMetricTemp) e.simpleMetricTemp.textContent = formatTemperature(stats.temperature, c.temperatureUnit, 1);
+    if (e.simpleMetricPhase) e.simpleMetricPhase.textContent = stats.phase;
+    if (e.simpleMetricAmbient) e.simpleMetricAmbient.textContent = formatTemperature(c.ambientTemp, c.temperatureUnit, 1);
+    if (e.simpleMetricScenario) e.simpleMetricScenario.textContent = c.cupPresent ? `${c.material} cup` : "Open tray";
     e.startScenarioBtn.classList.toggle("active", running);
     e.stopScenarioBtn.classList.toggle("active", !running);
     const trackedParticles = this.app.getTrackedParticles();

@@ -536,6 +536,30 @@ export class ThermodynamicsEngine {
     }
   }
 
+  getPhaseChangeRateScale(state, exchange) {
+    const configuredScale = Math.max(1, this.config.phaseChangeRateScale ?? 1);
+    if (configuredScale <= 1 || Math.abs(exchange.netPower) < 0.01) {
+      return 1;
+    }
+
+    const nearFreezing = Math.abs(state.temperature - FREEZING_POINT) < 0.02;
+    const nearBoiling = Math.abs(state.temperature - BOILING_POINT) < 0.02;
+    const hotDriver =
+      this.bulkTargetTemp > BOILING_POINT ||
+      this.config.ambientTemp > BOILING_POINT ||
+      this.localZones.some((zone) => zone.targetTemperature > BOILING_POINT);
+    const coldDriver =
+      this.bulkTargetTemp < FREEZING_POINT ||
+      this.config.ambientTemp < FREEZING_POINT ||
+      this.localZones.some((zone) => zone.targetTemperature < FREEZING_POINT);
+
+    const vaporizing = nearBoiling && state.liquid > 0.02 && exchange.netPower > 0 && hotDriver;
+    const condensing = nearBoiling && state.gas > 0.02 && exchange.netPower < 0 && !hotDriver;
+    const melting = nearFreezing && state.solid > 0.02 && exchange.netPower > 0 && !coldDriver;
+    const freezing = nearFreezing && state.liquid > 0.02 && exchange.netPower < 0 && coldDriver;
+    return vaporizing || condensing || melting || freezing ? configuredScale : 1;
+  }
+
   coupleToBulk(particles, stats, dt) {
     this.elapsed += dt;
     this.sampleMassKg = this.computeSampleMassKg(particles);
@@ -544,14 +568,16 @@ export class ThermodynamicsEngine {
     this.thermalCapacity = this.sampleMassKg * Math.max(1, currentState.effectiveCp);
     const exchange = this.computeHeatExchange(currentState);
     this.syncAtmosphereState(currentState, exchange);
-    this.sampleSpecificEnthalpy += (exchange.netPower * dt) / Math.max(0.001, this.sampleMassKg);
+    const phaseChangeRateScale = this.getPhaseChangeRateScale(currentState, exchange);
+    const appliedNetPower = exchange.netPower * phaseChangeRateScale;
+    this.sampleSpecificEnthalpy += (appliedNetPower * dt) / Math.max(0.001, this.sampleMassKg);
     this.sampleSpecificEnthalpy = clamp(this.sampleSpecificEnthalpy, -200000, 4200000);
     const nextState = this.enthalpyToState(this.sampleSpecificEnthalpy);
     const targetTemp = clamp(nextState.temperature, 0.3, 773.15);
 
     this.lastHeatFlow = exchange.environmentPower;
     this.lastSourcePower = exchange.sourcePower;
-    this.lastNetPower = exchange.netPower;
+    this.lastNetPower = appliedNetPower;
     this.heatLost += Math.max(0, -exchange.environmentPower) * dt;
 
     for (let index = this.localZones.length - 1; index >= 0; index -= 1) {
