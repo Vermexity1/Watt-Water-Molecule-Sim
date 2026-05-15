@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta
+    name="description"
+    content="A browser-based molecular dynamics and thermodynamics lab for exploring temperature, heat transfer, and insulation."
+  />
+  <title>Molecular Thermodynamics Lab</title>
+  <link rel="stylesheet" href="./css/styles.css" />
+</head>
+<body>
+  <div class="welcome-screen" id="welcomeScreen">
+    <canvas id="welcomeCanvas"></canvas>
+    <div class="welcome-overlay">
+      <div class="welcome-title-block" id="welcomeTitleBlock">
+        <div class="welcome-kicker">Science Simulation</div>
+        <h1>Watt's Water Molecule Lab</h1>
+        <div class="welcome-credit">Created By Jathin Potnuru</div>
+        <p>
+          Step into a molecular thermodynamics lab where water molecules heat, cool, cluster, and burst into motion.
+        </p>
+        <button id="enterLabBtn" class="enter-lab-btn">Enter The Lab</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="app">
+    <header class="top-bar" id="topBar">
+      <div class="metric"><div class="label">Temperature</div><div class="value" id="metricTemp">0 C</div></div>
+      <div class="metric"><div class="label">Total Energy</div><div class="value" id="metricTotal">0</div></div>
+      <div class="metric"><div class="label">Kinetic</div><div class="value" id="metricKE">0</div></div>
+      <div class="metric"><div class="label">Potential</div><div class="value" id="metricPE">0</div></div>
+      <div class="metric"><div class="label">Heat Lost</div><div class="value" id="metricHeatLoss">0 J</div></div>
+      <div class="metric"><div class="label">Phase Pattern</div><div class="value" id="metricPhase">Liquid-like</div></div>
+      <div class="metric"><div class="label">FPS</div><div class="value" id="metricFPS">0</div></div>
+    </header>
+
+    <div class="app-splitter vertical" id="panelSplitter" aria-hidden="true"></div>
+
+    <main class="sim-shell" aria-label="Simulation area">
+      <canvas id="simCanvas"></canvas>
+      <div class="sim-badge">
+        <div class="badge" id="modeBadge">Tool: Heat brush</div>
+        <div class="badge" id="boundaryBadge">Boundary: Reflective</div>
+        <div class="badge" id="materialBadge">Cup: Glass</div>
+      </div>
+      <div class="overlay-notes" id="overlayNotes"></div>
+      <div class="tooltip" id="tooltip"></div>
+    </main>
+
+    <div class="app-splitter horizontal" id="graphSectionSplitter" aria-hidden="true"></div>
+
+    <section class="graphs" aria-label="Data graphs">
+      <div class="graph-toolbar">
+        <div class="graph-toolbar-title">Graph Views</div>
+        <div class="graph-toolbar-actions">
+          <button class="graph-toggle-btn active" id="toggleTempGraphBtn" type="button">Temperature</button>
+          <button class="graph-toggle-btn active" id="toggleTrackedGraphBtn" type="button">Tracked</button>
+          <button class="graph-toggle-btn active" id="toggleEnergyGraphBtn" type="button">Energy</button>
+        </div>
+      </div>
+      <div class="graph-scroll" id="graphScroll">
+        <div class="graph-pane" id="tempGraphPane" data-pane="temperature">
+          <div class="graph-pane-head">
+            <div class="graph-pane-title">Temperature vs Time</div>
+            <div class="graph-pane-note">Sample temperature history</div>
+          </div>
+          <div class="graph-canvas-wrap">
+            <canvas id="tempGraphCanvas"></canvas>
+          </div>
+        </div>
+
+        <div class="graph-splitter" id="splitterTempTracked" data-first="temperature" data-second="tracked" aria-hidden="true"></div>
+
+        <div class="graph-pane" id="trackedGraphPane" data-pane="tracked">
+          <div class="graph-pane-head">
+            <div class="graph-pane-title">Tracked Particle Temperature</div>
+            <div class="graph-pane-note">Selected particles update together here</div>
+          </div>
+          <div class="graph-canvas-wrap">
+            <canvas id="trackedGraphCanvas"></canvas>
+          </div>
+          <div class="tracked-graph-legend" id="trackedGraphLegend" aria-label="Tracked particle legend"></div>
+        </div>
+
+        <div class="graph-splitter" id="splitterTrackedEnergy" data-first="tracked" data-second="energy" aria-hidden="true"></div>
+
+        <div class="graph-pane" id="energyGraphPane" data-pane="energy">
+          <div class="graph-pane-head">
+            <div class="graph-pane-title">Energy vs Time</div>
+            <div class="graph-pane-note">Kinetic, potential, and total energy</div>
+          </div>
+          <div class="graph-canvas-wrap">
+            <canvas id="energyGraphCanvas"></canvas>
+          </div>
+          <div class="graph-legend" id="graphLegend" aria-label="Graph legend">
+            <div class="legend-item"><span class="legend-swatch legend-ke"></span><span>Kinetic Energy</span></div>
+            <div class="legend-item"><span class="legend-swatch legend-pe"></span><span>Potential Energy</span></div>
+            <div class="legend-item"><span class="legend-swatch legend-total"></span><span>Total Energy</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel" aria-label="Controls and experiment data">
+      <div class="panel-head">
+        <button class="info-fab" id="infoFabBtn" type="button" aria-label="Open lab information">i</button>
+        <div class="eyebrow">Science Lab</div>
+        <h1>Thermodynamics Studio</h1>
+        <p class="subhead">
+          Explore how molecular collisions, heat transfer, and insulation choices shape the behavior of a virtual fluid sample.
+        </p>
+        <div class="status-pill" id="statusPill">Paused for setup</div>
+      </div>
+
+      <nav class="tab-nav" aria-label="Control groups">
+        <div class="tab-nav-main">
+          <button class="tab-btn active" data-tab-target="controls">Controls</button>
+          <button class="tab-btn" data-tab-target="temperature">Temperature</button>
+          <button class="tab-btn" data-tab-target="scenario">Scenario</button>
+          <button class="tab-btn" data-tab-target="molecules">Molecules</button>
+          <button class="tab-btn" data-tab-target="results">Results</button>
+          <button class="tab-btn" data-tab-target="help">Help</button>
+        </div>
+      </nav>
+
+      <div class="tab-stack">
+        <section class="tab-panel active" data-tab-panel="controls">
+          <div class="section compact">
+            <h2>Simulation Controls</h2>
+            <div class="action-grid">
+              <button id="startPauseBtn">Pause Simulation</button>
+              <button id="resetBtn">Reset</button>
+              <button id="boundaryBtn">Toggle Boundaries</button>
+              <button id="recordTrialBtn">Record Trial</button>
+            </div>
+            <div class="control-grid top-gap">
+              <div class="control-card">
+                <label for="timeScaleSelect">Time Scale</label>
+                <select id="timeScaleSelect">
+                  <option value="0.0625">0.0625x</option>
+                  <option value="0.125">0.125x</option>
+                  <option value="0.25">0.25x</option>
+                  <option value="0.5">0.5x</option>
+                  <option value="1" selected>1x Real Time</option>
+                  <option value="2">2x</option>
+                  <option value="4">4x</option>
+                  <option value="8">8x</option>
+                  <option value="16">16x</option>
+                </select>
+              </div>
+              <div class="control-card">
+                <div class="label-row"><span>Current Rate</span><span class="value" id="timeScaleReadout">1.00x</span></div>
+                <p class="hint">1x means one second on screen equals one second of simulated time.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="section compact">
+            <h2>Advanced Controls</h2>
+            <div class="control-grid">
+              <div class="control-card">
+                <div class="label-row"><span>Gravity Strength</span><span class="value" id="gravityValue"></span></div>
+                <input id="gravitySlider" type="range" min="0" max="1.5" step="0.05" value="0.8" />
+              </div>
+              <div class="control-card">
+                <div class="label-row"><span>Convection Strength</span><span class="value" id="convectionValue"></span></div>
+                <input id="convectionSlider" type="range" min="0" max="1.5" step="0.05" value="0.25" />
+              </div>
+              <div class="control-card">
+                <div class="label-row"><span>Trail Strength</span><span class="value" id="trailValue"></span></div>
+                <input id="trailsSlider" type="range" min="0" max="1" step="0.05" value="0" />
+              </div>
+              <div class="control-card">
+                <div class="label-row"><span>Vector Overlay</span><span class="value" id="vectorValue"></span></div>
+                <input id="vectorsSlider" type="range" min="0" max="1" step="1" value="1" />
+              </div>
+            </div>
+            <div class="action-grid top-gap">
+              <button id="overlayBtn">Concept Overlay</button>
+              <button id="thermostatBtn">Inside Temp Sets Start</button>
+            </div>
+          </div>
+
+          <div class="section compact note-card">
+            <h2>Interaction Guide</h2>
+            <p class="hint">
+              Click inside the sample to locally rescale molecules toward the brush temperature. Drag through the particles
+              to push the sample and create flow. Hover on a particle to inspect its motion and local temperature.
+            </p>
+          </div>
+        </section>
+
+        <section class="tab-panel" data-tab-panel="temperature">
+          <div class="section compact">
+            <h2>Temperature Controls</h2>
+            <div class="control-grid">
+              <div class="control-card control-card-wide">
+                <div class="label-row"><span>Inside Source Temperature</span><span class="value" id="temperatureValue"></span></div>
+                <input id="temperatureSlider" type="range" min="-273" max="500" step="1" value="42" />
+              </div>
+              <div class="control-card control-card-wide">
+                <div class="label-row"><span>Brush Temperature</span><span class="value" id="brushTempValue"></span></div>
+                <input id="brushTempSlider" type="range" min="-273" max="500" step="1" value="-40" />
+              </div>
+              <div class="control-card">
+                <div class="label-row"><span>Outside Temperature</span><span class="value" id="ambientValue"></span></div>
+                <input id="ambientSlider" type="range" min="-100" max="120" step="1" value="22" />
+              </div>
+              <div class="control-card">
+                <div class="label-row"><span>Ambient Humidity</span><span class="value" id="humidityValue"></span></div>
+                <input id="humiditySlider" type="range" min="10" max="100" step="1" value="55" />
+              </div>
+              <div class="control-card control-card-wide">
+                <div class="label-row"><span>Environmental Heat Coefficient</span><span class="value" id="envCoeffValue"></span></div>
+                <input id="envCoeffSlider" type="range" min="0.1" max="2.5" step="0.05" value="0.9" />
+              </div>
+            </div>
+          </div>
+
+          <div class="section compact">
+            <h2>Units And Display</h2>
+            <div class="control-grid">
+              <div class="control-card">
+                <label for="measurementCycleBtn">Measurement Mode</label>
+                <button class="tab-utility-btn" id="measurementCycleBtn" type="button">Units: F</button>
+              </div>
+              <div class="control-card">
+                <div class="label-row"><span>Current Units</span><span class="value">Display</span></div>
+                <div class="focus-summary units-summary" id="measurementModeValue">Imperial / Fahrenheit / Calories</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section compact note-card">
+            <h2>Temperature Guide</h2>
+            <p class="hint">
+              Keep all temperature-related controls here: set the inside source, compare it with room conditions, adjust
+              humidity for condensation, and switch units without jumping between different tabs.
+            </p>
+          </div>
+        </section>
+
+        <section class="tab-panel" data-tab-panel="scenario">
+          <div class="section compact">
+            <h2>Scenario Builder</h2>
+            <div class="scenario-card">
+              <div class="scenario-head">
+                <div class="scenario-title">Starting State</div>
+                <div class="scenario-badge">Selected Temperature</div>
+              </div>
+              <p class="hint">
+                Each experiment starts at the inside temperature you choose. Build the setup, then let students test how the
+                sample cools, warms, melts, or boils as heat moves through the cup and into the room.
+              </p>
+            </div>
+            <div class="action-grid top-gap scenario-actions">
+              <button id="buildScenarioBtn" class="active">Build Scenario</button>
+              <button id="resetToIceBtn">Reset To Ice</button>
+              <button id="startScenarioBtn">Start Scenario</button>
+              <button id="stopScenarioBtn">Stop Scenario</button>
+            </div>
+            <div class="control-grid">
+              <div class="control-card">
+                <label for="layoutSelect">Lab Layout</label>
+                <select id="layoutSelect">
+                  <option value="tray" selected>Open Tray</option>
+                  <option value="cup">Cup Experiment</option>
+                </select>
+              </div>
+              <div class="control-card">
+                <label for="cupPlacementSelect">Cup Placement</label>
+                <select id="cupPlacementSelect">
+                  <option value="left">Left</option>
+                  <option value="center" selected>Center</option>
+                  <option value="right">Right</option>
+                </select>
+              </div>
+              <div class="control-card">
+                <label for="materialSelect">Cup Material</label>
+                <select id="materialSelect">
+                  <option value="Styrofoam">Styrofoam</option>
+                  <option value="Plastic">Plastic</option>
+                  <option value="Glass" selected>Glass</option>
+                  <option value="Metal">Metal</option>
+                </select>
+              </div>
+              <div class="control-card">
+                <label for="environmentSelect">Environment Preset</label>
+                <select id="environmentSelect">
+                  <option value="Sunny">Sunny</option>
+                  <option value="Cool" selected>Cool</option>
+                  <option value="Cold">Cold</option>
+                </select>
+              </div>
+              <div class="control-card">
+                <div class="label-row"><span>Cup Thickness</span><span class="value" id="thicknessValue"></span></div>
+                <input id="thicknessSlider" type="range" min="0.6" max="5" step="0.1" value="1.6" />
+              </div>
+            </div>
+            <div class="section compact note-card top-gap scenario-preview">
+              <h2>Scenario Preview</h2>
+              <p class="hint" id="scenarioSummary">
+                Open tray selected. The sample will start at the chosen inside temperature in a shallow container until you build the scenario.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="tab-panel" data-tab-panel="molecules">
+          <div class="section compact">
+            <h2>Molecular Setup</h2>
+            <div class="control-grid">
+              <div class="control-card">
+                <div class="label-row"><span>Particle Count</span><span class="value" id="particleCountValue"></span></div>
+                <input id="particleCountSlider" type="range" min="180" max="500" step="10" value="320" />
+              </div>
+              <div class="control-card">
+                <div class="label-row"><span>Interaction Strength (epsilon)</span><span class="value" id="epsilonValue"></span></div>
+                <input id="epsilonSlider" type="range" min="0.35" max="2.4" step="0.01" value="1.05" />
+              </div>
+              <div class="control-card">
+                <div class="label-row"><span>Particle Size (sigma)</span><span class="value" id="sigmaValue"></span></div>
+                <input id="sigmaSlider" type="range" min="8" max="18" step="0.2" value="11" />
+              </div>
+              <div class="control-card control-card-wide">
+                <div class="label-row"><span>Time Step (dt)</span><span class="value" id="dtValue"></span></div>
+                <input id="dtSlider" type="range" min="0.005" max="0.03" step="0.001" value="0.012" />
+              </div>
+            </div>
+          </div>
+
+          <div class="section compact note-card">
+            <h2>Particle Tracking</h2>
+            <p class="hint">
+              Enter single particles, ranges, or ranges with exclusions to follow them during the experiment.
+            </p>
+            <div class="input-row top-gap">
+              <input
+                id="particleFocusInput"
+                class="text-input"
+                type="text"
+                placeholder="Examples: 0, 4,18,31, 1-99, 1-99n3,6,7"
+                aria-label="Particle numbers to track"
+              />
+            </div>
+            <div class="action-grid top-gap">
+              <button id="applyParticleFocusBtn">Track Particles</button>
+              <button id="clearParticleFocusBtn">Clear Tracking</button>
+            </div>
+            <div class="tracking-notation top-gap">
+              <div class="tracking-notation-title">Tracking Notation</div>
+              <div class="tracking-notation-item"><code>8</code> tracks particle 8.</div>
+              <div class="tracking-notation-item"><code>4,18,31</code> tracks particles 4, 18, and 31.</div>
+              <div class="tracking-notation-item"><code>1-99</code> tracks every particle from 1 through 99.</div>
+              <div class="tracking-notation-item"><code>1-99n3,6,7,5,3</code> tracks particles 1 through 99 except 3, 6, 7, and 5.</div>
+              <div class="tracking-notation-item"><code>1-25; 40-50n44,45; 90</code> combines multiple groups. Use semicolons to separate groups when needed.</div>
+            </div>
+            <div class="focus-summary top-gap" id="particleFocusSummary">
+              No particles selected.
+            </div>
+          </div>
+        </section>
+
+        <section class="tab-panel" data-tab-panel="results">
+          <div class="section compact">
+            <h2>Experiment Readouts</h2>
+            <div class="readout">
+              <div class="item"><div class="small">Cooling Rate</div><div class="big" id="coolingRateReadout">0.00 C/s</div></div>
+              <div class="item"><div class="small">Insulation Score</div><div class="big" id="efficiencyReadout">0%</div></div>
+              <div class="item"><div class="small">Boundary Mode</div><div class="big" id="boundaryReadout">Reflective</div></div>
+              <div class="item"><div class="small">Observed Phase</div><div class="big" id="phaseReadout">Liquid-like</div></div>
+              <div class="item"><div class="small">Inside Source</div><div class="big" id="sourceTempReadout">0 C</div></div>
+              <div class="item"><div class="small">Outside Temp</div><div class="big" id="ambientTempReadout">0 C</div></div>
+              <div class="item"><div class="small">Humidity</div><div class="big" id="humidityReadout">55%</div></div>
+              <div class="item"><div class="small">Dew Point</div><div class="big" id="dewPointReadout">0 C</div></div>
+              <div class="item"><div class="small">Condensing</div><div class="big" id="condensationReadout">0.00 g/s</div></div>
+              <div class="item"><div class="small">Evaporating</div><div class="big" id="evaporationReadout">0.00 g/s</div></div>
+              <div class="item"><div class="small">Falling Drips</div><div class="big" id="dripReadout">0</div></div>
+            </div>
+          </div>
+
+          <div class="section compact note-card">
+            <h2>Trial Log</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Material</th>
+                  <th>Delta T</th>
+                  <th>Heat Loss</th>
+                  <th>Rate</th>
+                  <th>Score</th>
+                </tr>
+              </thead>
+              <tbody id="trialBody"></tbody>
+            </table>
+          </div>
+
+          <div class="section compact note-card">
+            <h2>Teacher Note</h2>
+            <p class="hint">
+              Keep the starting fluid temperature constant between trials, then compare the cooling rate and total heat loss
+              to decide which cup insulates most effectively.
+            </p>
+          </div>
+        </section>
+
+        <section class="tab-panel" data-tab-panel="help">
+          <div class="section compact note-card">
+            <h2>How To Use This Lab</h2>
+            <div class="help-grid">
+              <article class="help-card">
+                <h3>Controls</h3>
+                <p>
+                  Start or pause the simulation, switch boundary modes, turn the educational overlay on, and record a trial.
+                  Time scale, gravity, convection, trails, and vector overlays are grouped here so motion controls stay in one place.
+                </p>
+              </article>
+              <article class="help-card">
+                <h3>Scenario</h3>
+                <p>
+                  Build either an open tray or a cup experiment, pick the cup material, set the room conditions, and
+                  choose the starting inside temperature for the sample. Use Reset To Ice only when you want to force an
+                  ice-start comparison.
+                </p>
+              </article>
+              <article class="help-card">
+                <h3>Temperature</h3>
+                <p>
+                  The inside source, outside temperature, humidity, brush temperature, and unit changes are grouped here.
+                  If you change the inside temperature during a run, the sample shifts toward the new value gradually rather
+                  than jumping instantly.
+                </p>
+              </article>
+              <article class="help-card">
+                <h3>Molecules</h3>
+                <p>
+                  Particle count, epsilon, sigma, and dt are grouped with particle tracking so the structure of the
+                  molecular model stays together in one tab.
+                </p>
+              </article>
+              <article class="help-card">
+                <h3>Environment</h3>
+                <p>
+                  Outside temperature and the environmental heat coefficient control how strongly the surroundings warm or
+                  cool the sample. Ambient humidity changes dew point, condensation, and evaporation. Cup thickness changes
+                  how hard it is for heat to move through the wall. In cup mode, the material conductivity, wall thickness,
+                  outside temperature, and humidity all affect what happens.
+                </p>
+              </article>
+              <article class="help-card">
+                <h3>Advanced Controls</h3>
+                <p>
+                  Gravity settles the sample, convection lets warmer particles rise, trails show recent motion, and vector
+                  overlay draws velocity arrows. Use these when students are ready for a deeper look at the motion.
+                </p>
+              </article>
+              <article class="help-card">
+                <h3>Phase Behavior</h3>
+                <p>
+                  At very low temperature the particles stay close and vibrate in place like a solid. At moderate
+                  temperature they flow like a liquid. At high temperature they spread out and move faster like a gas.
+                </p>
+              </article>
+              <article class="help-card">
+                <h3>Temperature Controls</h3>
+                <p>
+                  In this model, the sample begins at the chosen inside temperature, then its temperature changes because
+                  heat moves through the cup wall and open top toward the room. Changing the inside value during a run
+                  acts like changing the source condition, so the molecules respond over time instead of teleporting to a
+                  new temperature.
+                </p>
+              </article>
+              <article class="help-card">
+                <h3>Condensation And Drips</h3>
+                <p>
+                  When the outside cup wall drops below the dew point of the room air, water condenses into droplets on the
+                  outside surface. Those droplets can merge, slide, detach, and fall. If the wall warms back up or the air is
+                  dry, the droplets evaporate away again.
+                </p>
+              </article>
+              <article class="help-card">
+                <h3>Physics Sources</h3>
+                <p>
+                  Water heat capacity, steam heat capacity data, boiling point, and phase-change behavior are based on
+                  NIST and USGS references. Cup-wall conductivity values are based on published NIST values for expanded
+                  polystyrene and stainless steel, a NIST Pyrex value for glass, and a reported polypropylene value for the
+                  plastic cup model.
+                </p>
+              </article>
+              <article class="help-card">
+                <h3>Time And Units</h3>
+                <p>
+                  The simulation now runs in real time at 1x. You can slow it down or speed it up with the time-scale
+                  menu. Unit controls let students switch between Celsius, Fahrenheit, and Kelvin, plus metric or imperial
+                  style readouts for thickness and energy.
+                </p>
+              </article>
+            </div>
+          </div>
+        </section>
+      </div>
+    </aside>
+  </div>
+
+  <div class="info-modal-shell" id="infoModalShell" aria-hidden="true">
+    <div class="info-modal-backdrop" id="infoModalBackdrop"></div>
+    <section class="info-modal" id="infoModal" aria-label="Lab information">
+      <div class="info-modal-head">
+        <div>
+          <div class="eyebrow">Information</div>
+          <h2>Lab Guide And Project Info</h2>
+        </div>
+        <button class="info-modal-close" id="infoModalCloseBtn" type="button" aria-label="Close information">Close</button>
+      </div>
+
+      <div class="info-modal-body">
+        <div class="section compact note-card about-card">
+          <h2>About</h2>
+          <div class="about-panel">
+            <div class="about-orbit about-orbit-a"></div>
+            <div class="about-orbit about-orbit-b"></div>
+            <div class="about-core"></div>
+            <p class="about-copy">
+              This project was made by Jathin Potnuru, Miss Watt's 8th Grade Honors, Class of OJR 2030.
+            </p>
+          </div>
+        </div>
+
+        <div class="section compact note-card">
+          <h2>How To Use This Lab</h2>
+          <div class="help-grid">
+            <article class="help-card">
+              <h3>Controls</h3>
+              <p>
+                Start or pause the simulation, switch boundary modes, turn the educational overlay on, and record a trial.
+                Time scale, gravity, convection, trails, and vector overlays are grouped here so motion controls stay in one place.
+              </p>
+            </article>
+            <article class="help-card">
+              <h3>Scenario</h3>
+              <p>
+                Build either an open tray or a cup experiment, pick the cup material, set the room conditions, and
+                choose the starting inside temperature for the sample. Use Reset To Ice only when you want to force an
+                ice-start comparison.
+              </p>
+            </article>
+            <article class="help-card">
+              <h3>Temperature</h3>
+              <p>
+                The inside source, outside temperature, humidity, brush temperature, and unit changes are grouped here.
+                If you change the inside temperature during a run, the sample shifts toward the new value gradually rather
+                than jumping instantly.
+              </p>
+            </article>
+            <article class="help-card">
+              <h3>Molecules</h3>
+              <p>
+                Particle count, epsilon, sigma, and dt are grouped with particle tracking so the structure of the
+                molecular model stays together in one tab.
+              </p>
+            </article>
+            <article class="help-card">
+              <h3>Environment</h3>
+              <p>
+                Outside temperature and the environmental heat coefficient control how strongly the surroundings warm or
+                cool the sample. Ambient humidity changes dew point, condensation, and evaporation. Cup thickness changes
+                how hard it is for heat to move through the wall. In cup mode, the material conductivity, wall thickness,
+                outside temperature, and humidity all affect what happens.
+              </p>
+            </article>
+            <article class="help-card">
+              <h3>Advanced Controls</h3>
+              <p>
+                Gravity settles the sample, convection lets warmer particles rise, trails show recent motion, and vector
+                overlay draws velocity arrows. Use these when students are ready for a deeper look at the motion.
+              </p>
+            </article>
+            <article class="help-card">
+              <h3>Phase Behavior</h3>
+              <p>
+                At very low temperature the particles stay close and vibrate in place like a solid. At moderate
+                temperature they flow like a liquid. At high temperature they spread out and move faster like a gas.
+              </p>
+            </article>
+            <article class="help-card">
+              <h3>Temperature Controls</h3>
+              <p>
+                In this model, the sample begins at the chosen inside temperature, then its temperature changes because
+                heat moves through the cup wall and open top toward the room. Changing the inside value during a run
+                acts like changing the source condition, so the molecules respond over time instead of teleporting to a
+                new temperature.
+              </p>
+            </article>
+            <article class="help-card">
+              <h3>Condensation And Drips</h3>
+              <p>
+                When the outside cup wall drops below the dew point of the room air, water condenses into droplets on the
+                outside surface. Those droplets can merge, slide, detach, and fall. If the wall warms back up or the air is
+                dry, the droplets evaporate away again.
+              </p>
+            </article>
+            <article class="help-card">
+              <h3>Physics Sources</h3>
+              <p>
+                Water heat capacity, steam heat capacity data, boiling point, and phase-change behavior are based on
+                NIST and USGS references. Cup-wall conductivity values are based on published NIST values for expanded
+                polystyrene and stainless steel, a NIST Pyrex value for glass, and a reported polypropylene value for the
+                plastic cup model.
+              </p>
+            </article>
+            <article class="help-card">
+              <h3>Time And Units</h3>
+              <p>
+                The simulation now runs in real time at 1x. You can slow it down or speed it up with the time-scale
+                menu. Unit controls let students switch between Celsius, Fahrenheit, and Kelvin, plus metric or imperial
+                style readouts for thickness and energy.
+              </p>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
